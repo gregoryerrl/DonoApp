@@ -1,31 +1,48 @@
 [versions]
-agp = "8.3.0"
-kotlin = "1.9.0"
-coreKtx = "1.10.1"
-junit = "4.13.2"
-junitVersion = "1.1.5"
-espressoCore = "3.5.1"
-lifecycleRuntimeKtx = "2.6.1"
-activityCompose = "1.7.0"
-composeBom = "2023.08.00"
+# SDK and Kotlin
+agp = "8.3.0" # Android Gradle Plugin
+appcompatVersion = "1.6.1"
+kotlin = "1.9.0" # Kotlin
+
+# CameraX
+cameraXVersion = "1.3.2" # CameraX Core
+
+# Google ML Kit
+textRecognitionVersion = "16.0.0" # Text recognition
+
+# AndroidX
+activityComposeVersion = "1.8.2" # Activity Compose
+coreKtxVersion = "1.12.0" # Core KTX
+material3Version = "1.2.1" # Material3
+composeVersion = "2024.02.02" # Compose
+
+# Testing Libraries
+junitVersion = "4.13.2"
+androidxJunitVersion = "1.1.5"
+espressoCoreVersion = "3.5.1"
 
 [libraries]
-androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
-junit = { group = "junit", name = "junit", version.ref = "junit" }
-androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
-androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
-androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
-androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
-androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
-androidx-ui = { group = "androidx.compose.ui", name = "ui" }
-androidx-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
-androidx-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
-androidx-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
-androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
-androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
-androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
+# CameraX Libraries
+androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompatVersion" }
+androidx-camera-core = { module = "androidx.camera:camera-core", version.ref = "cameraXVersion" }
+androidx-camera-camera2 = { module = "androidx.camera:camera-camera2", version.ref = "cameraXVersion" }
+androidx-camera-lifecycle = { module = "androidx.camera:camera-lifecycle", version.ref = "cameraXVersion" }
+androidx-camera-view = { module = "androidx.camera:camera-view", version.ref = "cameraXVersion" }
+
+# ML Kit Text Recognition
+text-recognition = { module = "com.google.mlkit:text-recognition", version.ref = "textRecognitionVersion" }
+
+# Compose and UI
+androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityComposeVersion" }
+androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtxVersion" }
+androidx-material3 = { module = "androidx.compose.material3:material3", version.ref = "material3Version" }
+androidx-compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeVersion" }
+
+# Testing Libraries
+junit = { module = "junit:junit", version.ref = "junitVersion" }
+androidx-junit = { module = "androidx.test.ext:junit", version.ref = "androidxJunitVersion" }
+androidx-espresso-core = { module = "androidx.test.espresso:espresso-core", version.ref = "espressoCoreVersion" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
 jetbrainsKotlinAndroid = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
-
