@@ -64,10 +64,17 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.material3)
+    implementation(libs.androidx.constraintlayout)
+    // To use constraintlayout in compose
+    implementation(libs.androidx.constraintlayout.compose)
+    implementation(libs.androidx.material)
+    implementation(libs.androidx.material3.v101)
+
 
     // Testing Libraries
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+
 
 }

@@ -24,6 +24,8 @@ import com.google.mlkit.vision.common.InputImage
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import androidx.compose.foundation.border
+import androidx.compose.material.Text
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
@@ -31,10 +33,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.camera.core.ImageAnalysis
+import androidx.compose.foundation.layout.padding
+import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothSocket
+import androidx.compose.foundation.background
+import androidx.core.app.ActivityCompat
+import java.io.IOException
+import java.util.*
+import android.bluetooth.BluetoothManager
+import android.content.Context
+import androidx.compose.ui.text.font.FontWeight
 
 class MainActivity : ComponentActivity() {
     private lateinit var ocrProcessor: OCRProcessor
-    private lateinit var imageCapture: ImageCapture
     private lateinit var cameraExecutor: ExecutorService
 
     private val requestPermissionLauncher =
@@ -65,23 +77,38 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     fun CameraPreviewWithOverlay(onViewFinderAvailable: (PreviewView) -> Unit) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            AndroidView(
-                factory = { context ->
-                    PreviewView(context).apply {
-                        scaleType = PreviewView.ScaleType.FIT_CENTER
-                        onViewFinderAvailable(this)
-                    }
-                },
-                modifier = Modifier.fillMaxSize()
+        Box(modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Green)) {
+            // The text should be placed above the box
+            Text(
+                text = "PLACE THE ITEM IN THE CAMERA",
+                fontSize = 36.sp,
+                fontWeight = FontWeight.Light,
+                color = Color.Black,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 70.dp) // Adjust this value as needed
             )
+            // Create a box that will contain the camera feed
             Box(
                 modifier = Modifier
                     .align(Alignment.Center)
-                    .width(300.dp) // Specify the size of the border
-                    .height(200.dp)
-                    .border(2.dp, Color.Green) // Set the border color and width
-            )
+                    .width(300.dp) // Width of the camera feed and green border
+                    .height(200.dp) // Height of the camera feed and green border
+                    .border(2.dp, Color.Green)
+            ) {
+                // Camera preview is placed inside this Box
+                AndroidView(
+                    factory = { context ->
+                        PreviewView(context).apply {
+                            scaleType = PreviewView.ScaleType.FIT_CENTER
+                            onViewFinderAvailable(this)
+                        }
+                    },
+                    modifier = Modifier.matchParentSize() // Match the size of the enclosing box
+                )
+            }
         }
     }
 
@@ -107,9 +134,9 @@ class MainActivity : ComponentActivity() {
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                 .build()
                 .also {
-                    it.setAnalyzer(cameraExecutor, ImageAnalysis.Analyzer { imageProxy ->
+                    it.setAnalyzer(cameraExecutor) { imageProxy ->
                         processImageProxy(imageProxy)
-                    })
+                    }
                 }
 
             val cameraSelector = CameraSelector.DEFAULT_FRONT_CAMERA
@@ -147,31 +174,6 @@ class MainActivity : ComponentActivity() {
             .show()
     }
 
-    private fun takePictureAndProcess() {
-        val imageCapture = imageCapture ?: return
-
-        imageCapture.takePicture(cameraExecutor, object : ImageCapture.OnImageCapturedCallback() {
-            @OptIn(ExperimentalGetImage::class)
-            override fun onCaptureSuccess(imageProxy: ImageProxy) {
-                val rotationDegrees = imageProxy.imageInfo.rotationDegrees
-                val mediaImage = imageProxy.image
-                if (mediaImage != null) {
-                    val inputImage = InputImage.fromMediaImage(mediaImage, rotationDegrees)
-                    ocrProcessor.processImage(inputImage) { text ->
-                        Toast.makeText(applicationContext, text, Toast.LENGTH_LONG).show()
-                    }
-                } else {
-                    Toast.makeText(applicationContext, "Capture failed.", Toast.LENGTH_SHORT).show()
-                }
-                imageProxy.close()
-            }
-
-            override fun onError(exception: ImageCaptureException) {
-                Toast.makeText(applicationContext, "Capture error: ${exception.message}", Toast.LENGTH_SHORT).show()
-            }
-        })
-    }
-
     @OptIn(ExperimentalGetImage::class)
     private fun processImageProxy(imageProxy: ImageProxy) {
         val mediaImage = imageProxy.image
@@ -179,6 +181,7 @@ class MainActivity : ComponentActivity() {
             val rotationDegrees = imageProxy.imageInfo.rotationDegrees
             val image = InputImage.fromMediaImage(mediaImage, rotationDegrees)
             ocrProcessor.processImage(image) { text ->
+                // Send detected text to Arduino
                 // Update your UI here. This is a simplified example using Toast.
                 runOnUiThread {
                     Toast.makeText(applicationContext, text, Toast.LENGTH_SHORT).show()
