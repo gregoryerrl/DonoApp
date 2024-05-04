@@ -1,17 +1,28 @@
 [versions]
 # SDK and Kotlin
+activityCompose = "1.3.1"
 agp = "8.3.0" # Android Gradle Plugin
+appcompat = "1.3.0"
 appcompatVersion = "1.6.1"
+cameraCamera2Version = "1.3.3"
+cameraCoreVersion = "1.3.3"
+cameraLifecycleVersion = "1.3.3"
+cameraViewVersion = "1.3.3"
 constraintlayoutComposeVersion = "1.1.0-alpha13"
 constraintlayoutVersion = "2.2.0-alpha13"
+coreKtx = "1.6.0"
+googleMaterial = "1.12.0"
 kotlin = "1.9.0" # Kotlin
 
 # CameraX
 cameraXVersion = "1.3.2" # CameraX Core
 
 # Google ML Kit
+material = "1.0.1"
 material3 = "1.0.1"
 materialVersion = "1.6.3"
+navigationCompose = "2.4.0-alpha10"
+textRecognition = "17.0.0"
 textRecognitionVersion = "16.0.0" # Text recognition
 
 # AndroidX
@@ -24,20 +35,34 @@ composeVersion = "2024.02.02" # Compose
 junitVersion = "4.13.2"
 androidxJunitVersion = "1.1.5"
 espressoCoreVersion = "3.5.1"
+navigationComposeVersion = "2.7.7"
+uiToolingPreviewVersion = "1.6.7"
 
 [libraries]
 # CameraX Libraries
+androidx-activity-compose-v131 = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
 androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompatVersion" }
+androidx-appcompat-v130 = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }
+androidx-camera-camera2-v133 = { module = "androidx.camera:camera-camera2", version.ref = "cameraCamera2Version" }
 androidx-camera-core = { module = "androidx.camera:camera-core", version.ref = "cameraXVersion" }
 androidx-camera-camera2 = { module = "androidx.camera:camera-camera2", version.ref = "cameraXVersion" }
+androidx-camera-core-v133 = { module = "androidx.camera:camera-core", version.ref = "cameraCoreVersion" }
 androidx-camera-lifecycle = { module = "androidx.camera:camera-lifecycle", version.ref = "cameraXVersion" }
+androidx-camera-lifecycle-v133 = { module = "androidx.camera:camera-lifecycle", version.ref = "cameraLifecycleVersion" }
 androidx-camera-view = { module = "androidx.camera:camera-view", version.ref = "cameraXVersion" }
 
 # ML Kit Text Recognition
+androidx-camera-view-v133 = { module = "androidx.camera:camera-view", version.ref = "cameraViewVersion" }
 androidx-constraintlayout = { module = "androidx.constraintlayout:constraintlayout", version.ref = "constraintlayoutVersion" }
 androidx-constraintlayout-compose = { module = "androidx.constraintlayout:constraintlayout-compose", version.ref = "constraintlayoutComposeVersion" }
+androidx-core-ktx-v160 = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
 androidx-material = { module = "androidx.compose.material:material", version.ref = "materialVersion" }
+androidx-material-v101 = { module = "androidx.compose.material:material", version.ref = "material" }
 androidx-material3-v101 = { module = "androidx.compose.material3:material3", version.ref = "material3" }
+androidx-navigation-compose-v240alpha10 = { module = "androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
+androidx-ui = { module = "androidx.compose.ui:ui", version.ref = "uiToolingPreviewVersion" }
+androidx-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview", version.ref = "uiToolingPreviewVersion" }
+material = { module = "com.google.android.material:material", version.ref = "googleMaterial" }
 text-recognition = { module = "com.google.mlkit:text-recognition", version.ref = "textRecognitionVersion" }
 
 # Compose and UI
@@ -50,6 +75,8 @@ androidx-compose-bom = { module = "androidx.compose:compose-bom", version.ref = 
 junit = { module = "junit:junit", version.ref = "junitVersion" }
 androidx-junit = { module = "androidx.test.ext:junit", version.ref = "androidxJunitVersion" }
 androidx-espresso-core = { module = "androidx.test.espresso:espresso-core", version.ref = "espressoCoreVersion" }
+androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationComposeVersion" }
+text-recognition-v1700 = { module = "com.google.mlkit:text-recognition", version.ref = "textRecognition" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

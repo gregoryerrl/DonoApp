@@ -51,6 +51,7 @@ android {
 dependencies {
     // Core library
     implementation(libs.androidx.appcompat)
+    implementation(libs.androidx.navigation.compose)
     val cameraXVersion = "1.3.2" // Replace with the latest stable version if available
 
     implementation(libs.androidx.camera.core)
@@ -75,6 +76,35 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+    // Compose
+    implementation(libs.androidx.ui)
+    implementation(libs.androidx.material.v101)
+    implementation(libs.androidx.ui.tooling.preview)
+
+    // Navigation for Compose
+    implementation(libs.androidx.navigation.compose.v240alpha10)
+
+    // CameraX
+    implementation(libs.androidx.camera.core.v133)
+    implementation(libs.androidx.camera.camera2.v133)
+    implementation(libs.androidx.camera.lifecycle.v133)
+    implementation(libs.androidx.camera.view.v133)
+
+    // ML Kit
+    implementation(libs.text.recognition.v1700) // Ensure version matches
+
+    // Core and other libraries
+    implementation(libs.androidx.core.ktx.v160)
+    implementation(libs.androidx.appcompat.v130)
+    implementation(libs.androidx.activity.compose.v131)
+
+    // Material Design
+    implementation(libs.material)
+
+    implementation(libs.androidx.navigation.compose)
+
+
+
 
 
 }
