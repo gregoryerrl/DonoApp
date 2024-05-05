@@ -37,6 +37,8 @@ androidxJunitVersion = "1.1.5"
 espressoCoreVersion = "3.5.1"
 navigationComposeVersion = "2.7.7"
 uiToolingPreviewVersion = "1.6.7"
+visionCommon = "17.3.0"
+material3Android = "1.2.1"
 
 [libraries]
 # CameraX Libraries
@@ -77,6 +79,8 @@ androidx-junit = { module = "androidx.test.ext:junit", version.ref = "androidxJu
 androidx-espresso-core = { module = "androidx.test.espresso:espresso-core", version.ref = "espressoCoreVersion" }
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationComposeVersion" }
 text-recognition-v1700 = { module = "com.google.mlkit:text-recognition", version.ref = "textRecognition" }
+vision-common = { group = "com.google.mlkit", name = "vision-common", version.ref = "visionCommon" }
+androidx-material3-android = { group = "androidx.compose.material3", name = "material3-android", version.ref = "material3Android" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

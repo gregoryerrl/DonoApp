@@ -49,59 +49,48 @@ android {
 }
 
 dependencies {
-    // Core library
-    implementation(libs.androidx.appcompat)
-    implementation(libs.androidx.navigation.compose)
-    val cameraXVersion = "1.3.2" // Replace with the latest stable version if available
+    implementation("androidx.core:core-ktx:1.7.0")
+    implementation("androidx.appcompat:appcompat:1.4.1")
+    implementation("com.google.android.material:material:1.5.0")
 
-    implementation(libs.androidx.camera.core)
-    implementation(libs.androidx.camera.camera2)
-    implementation(libs.androidx.camera.lifecycle)
-    implementation(libs.androidx.camera.view)
+    // Compose dependencies
+    implementation("androidx.compose.ui:ui:1.2.1")
+    implementation("androidx.compose.material:material:1.2.1")
+    implementation("androidx.compose.ui:ui-tooling-preview:1.2.1")
+    implementation("androidx.activity:activity-compose:1.4.0")
 
-    implementation(libs.text.recognition)
+    // Navigation Compose
+    implementation("androidx.navigation:navigation-compose:2.4.2")
+    implementation(libs.androidx.material3.android)
 
-    implementation(platform(libs.androidx.compose.bom))
-    implementation(libs.androidx.activity.compose)
-    implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.material3)
-    implementation(libs.androidx.constraintlayout)
-    // To use constraintlayout in compose
-    implementation(libs.androidx.constraintlayout.compose)
-    implementation(libs.androidx.material)
-    implementation(libs.androidx.material3.v101)
+    // CameraX core library using the camera2 implementation
+    val camerax_version = "1.3.2"
+    // The following line is optional, as the core library is included indirectly by camera-camera2
+    implementation("androidx.camera:camera-core:${camerax_version}")
+    implementation("androidx.camera:camera-camera2:${camerax_version}")
+    // If you want to additionally use the CameraX Lifecycle library
+    implementation("androidx.camera:camera-lifecycle:${camerax_version}")
+    // If you want to additionally use the CameraX VideoCapture library
+    implementation("androidx.camera:camera-video:${camerax_version}")
+    // If you want to additionally use the CameraX View class
+    implementation("androidx.camera:camera-view:${camerax_version}")
+    // If you want to additionally add CameraX ML Kit Vision Integration
+    implementation("androidx.camera:camera-mlkit-vision:1.3.0-beta02")
+    // If you want to additionally use the CameraX Extensions library
+    implementation("androidx.camera:camera-extensions:${camerax_version}")
 
 
-    // Testing Libraries
-    testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
-    // Compose
-    implementation(libs.androidx.ui)
-    implementation(libs.androidx.material.v101)
-    implementation(libs.androidx.ui.tooling.preview)
+    // ML Kit for Text Recognition
+    implementation("com.google.mlkit:text-recognition:16.0.0")
 
-    // Navigation for Compose
-    implementation(libs.androidx.navigation.compose.v240alpha10)
+    // Testing
+    testImplementation("junit:junit:4.13.2")
+    androidTestImplementation("androidx.test.ext:junit:1.1.3")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.4.0")
 
-    // CameraX
-    implementation(libs.androidx.camera.core.v133)
-    implementation(libs.androidx.camera.camera2.v133)
-    implementation(libs.androidx.camera.lifecycle.v133)
-    implementation(libs.androidx.camera.view.v133)
+    // Tooling
+    debugImplementation("androidx.compose.ui:ui-tooling:1.2.1")
 
-    // ML Kit
-    implementation(libs.text.recognition.v1700) // Ensure version matches
-
-    // Core and other libraries
-    implementation(libs.androidx.core.ktx.v160)
-    implementation(libs.androidx.appcompat.v130)
-    implementation(libs.androidx.activity.compose.v131)
-
-    // Material Design
-    implementation(libs.material)
-
-    implementation(libs.androidx.navigation.compose)
 
 
 
