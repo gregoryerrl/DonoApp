@@ -1,6 +1,10 @@
 package com.example.donoapp
 
 import android.Manifest
+import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothSocket
+import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -17,7 +21,7 @@ import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.unit.dp
 import androidx.annotation.OptIn
 import androidx.annotation.RequiresApi
 import androidx.camera.core.*
@@ -43,14 +47,147 @@ import android.graphics.YuvImage
 import android.graphics.Rect
 import java.io.ByteArrayOutputStream
 import android.view.WindowManager
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.app.ActivityCompat
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import java.io.IOException
+import java.time.format.DateTimeParseException
+import java.time.temporal.ChronoUnit
+import java.util.Locale
+import java.util.UUID
 
-class Scanner : ComponentActivity() {
+
+@RequiresApi(Build.VERSION_CODES.O)
+class Scanner() : ComponentActivity() {
+    companion object {
+        private const val REQUEST_CAMERA_PERMISSION = 101
+        private const val REQUEST_BLUETOOTH_PERMISSION = 102// Define a unique request code
+    }
+
     private lateinit var ocrProcessor: OCRProcessor
     private lateinit var cameraExecutor: ExecutorService
     private var detectedText by mutableStateOf("")
-    private var detectedDate by mutableStateOf("")
+    var detectedDate by mutableStateOf("")
     private var lastAnalyzedTimestamp = 0L
     private var lastToastTime = System.currentTimeMillis()
+    var inputDate by mutableStateOf(LocalDate.now())
+    var isDateAcceptable by mutableStateOf(true)
+    private lateinit var bluetoothManager: BluetoothManager
+
+    class BluetoothManager(val context: Context) {
+        private val bluetoothAdapter: BluetoothAdapter? = BluetoothAdapter.getDefaultAdapter()
+        var isConnected = mutableStateOf(false)
+        var connectedDeviceName = mutableStateOf("")
+        private var bluetoothSocket: BluetoothSocket? = null
+
+        val pairedDevices: List<BluetoothDevice>
+            get() {
+                // Check for BLUETOOTH_CONNECT permission which is required on API 31 and above
+                if (ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                    // Permission is not granted
+                    return emptyList()
+                }
+                return bluetoothAdapter?.bondedDevices?.toList() ?: emptyList()
+            }
+
+        fun connectToDevice(device: BluetoothDevice) {
+            try {
+                val uuid = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB") // Standard SerialPortService ID
+                if (ActivityCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.BLUETOOTH_CONNECT
+                    ) != PackageManager.PERMISSION_GRANTED
+                ) {
+                    // TODO: Consider calling
+                    //    ActivityCompat#requestPermissions
+                    // here to request the missing permissions, and then overriding
+                    //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                    //                                          int[] grantResults)
+                    // to handle the case where the user grants the permission. See the documentation
+                    // for ActivityCompat#requestPermissions for more details.
+                    return
+                }
+                bluetoothSocket = device.createRfcommSocketToServiceRecord(uuid)
+                if (ActivityCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.BLUETOOTH_CONNECT
+                    ) != PackageManager.PERMISSION_GRANTED
+                ) {
+                    // TODO: Consider calling
+                    //    ActivityCompat#requestPermissions
+                    // here to request the missing permissions, and then overriding
+                    //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                    //                                          int[] grantResults)
+                    // to handle the case where the user grants the permission. See the documentation
+                    // for ActivityCompat#requestPermissions for more details.
+                    return
+                }
+                bluetoothSocket?.connect()
+                isConnected.value = true
+                connectedDeviceName.value = device.name
+            } catch (e: IOException) {
+                isConnected.value = false
+            }
+        }
+        fun sendText(text: String) {
+            try {
+                bluetoothSocket?.outputStream?.write(text.toByteArray())
+            } catch (e: IOException) {
+                Log.e("BluetoothManager", "Failed to send text: $text", e)
+            }
+        }
+    }
+    @RequiresApi(Build.VERSION_CODES.S)
+    @Composable
+    fun AppNavigation() {
+        val navController = rememberNavController()
+        NavHost(navController = navController, startDestination = "welcome") {
+            composable("welcome") {
+                WelcomeScreen(onDonateClick = { navController.navigate("camera") }, onAdmin = {navController.navigate("admin")})
+            }
+            composable("camera") {
+                CameraPreview(navController)
+            }
+            composable("beneficiary") {
+                BeneficiaryScreen(bluetoothManager = bluetoothManager) { navController.navigate("confirmation") }
+            }
+            composable("confirmation") {
+                ConfirmationScreen(onSubmit = {navController.navigate("welcome")})
+            }
+            composable("admin") {
+                AdminScreen(bluetoothManager = bluetoothManager, onSubmit = {navController.navigate("welcome")})
+            }
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun updateDateAcceptance(inputDateString: String, detectedDateString: String, context: Context): Boolean {
+        if (inputDateString.isEmpty() || detectedDateString.isEmpty()) {
+            return false
+        }
+        return try {
+            val inputFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+            val detectedFormatter = DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.ENGLISH)
+
+            val inputDate = LocalDate.parse(inputDateString, inputFormatter)
+            val detectedDate = LocalDate.parse(detectedDateString, detectedFormatter)
+
+            // Calculate the difference in days between the two dates
+            val daysBetween = ChronoUnit.DAYS.between(inputDate, detectedDate)
+            val result = daysBetween >= 7
+
+
+            result  // Properly return the computed result
+        } catch (e: DateTimeParseException) {
+            false  // Handle parsing errors gracefully
+        }
+    }
 
     private fun showToast(message: String) {
         val currentTime = System.currentTimeMillis()
@@ -61,6 +198,8 @@ class Scanner : ComponentActivity() {
             lastToastTime = currentTime
         }
     }
+
+
 
     private fun Image.yuv420888ToBitmap(): Bitmap? {
         val yBuffer = planes[0].buffer // Y
@@ -89,42 +228,124 @@ class Scanner : ComponentActivity() {
         super.onCreate(savedInstanceState)
         ocrProcessor = OCRProcessor()
         cameraExecutor = Executors.newSingleThreadExecutor()
+        bluetoothManager = BluetoothManager(this)
         if (allPermissionsGranted()) {
-            setupCamera()
+            setContent {
+                AppNavigation()
+            }
         } else {
             requestPermissions()
         }
+
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     }
 
-    private val requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
-        if (isGranted) {
-            setupCamera()
-        }
-    }
     private fun requestPermissions() {
-        requestPermissionLauncher.launch(Manifest.permission.CAMERA)
+        ActivityCompat.requestPermissions(
+            this,
+            arrayOf(Manifest.permission.CAMERA),
+            REQUEST_CAMERA_PERMISSION
+        )
     }
 
     private fun allPermissionsGranted() = ContextCompat.checkSelfPermission(
         this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
 
+    @RequiresApi(Build.VERSION_CODES.O)
+    @Composable
+    fun CameraPreview(navController: NavHostController) {
+        val context = LocalContext.current
+
+        LaunchedEffect(inputDate, detectedDate) {
+            isDateAcceptable = updateDateAcceptance(
+                DateTimeFormatter.ISO_LOCAL_DATE.format(inputDate),
+                detectedDate,
+                context
+            )
+        }
+
+        Column(modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Green)
+            .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Box(modifier = Modifier.background(Color(0xFF388E3C), shape = RoundedCornerShape(12.dp))
+            ){
+                Text(
+                    text = "SCAN YOUR ITEM",
+                    fontSize = 36.sp,
+                    fontWeight = FontWeight.ExtraLight,
+                    color = Color.White,
+                    modifier = Modifier.padding(30.dp)
+                )
+            }
+
+            Spacer(Modifier.height(50.dp))
+
+            // Camera feed
+            Box(
+                modifier = Modifier
+                    .width(300.dp)
+                    .height(200.dp)
+                    .padding(top = 20.dp)
+            ) {
+                AndroidView(
+                    factory = { context ->
+                        PreviewView(context).apply {
+                            scaleType = PreviewView.ScaleType.FILL_CENTER
+                            setupCamera(this)
+                        }
+                    },
+                    modifier = Modifier.matchParentSize()
+                )
+            }
+
+            Spacer(Modifier.height(50.dp))
+
+            DetectedTextDisplay()
+
+            Spacer(modifier = Modifier.weight(1f)) // This pushes the button to the bottom
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                Button(
+                    onClick = {
+                        if (!isDateAcceptable) {
+                            Toast.makeText(context, "Product is nearly or already expired", Toast.LENGTH_LONG).show()
+                            navController.navigate("welcome")
+                        } else {
+                            Toast.makeText(context, "Product Accepted", Toast.LENGTH_LONG).show()
+                            navController.navigate("beneficiary")
+                        }
+                    },
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Text("Check and Proceed")
+                }
+            }
+        }
+    }
 
     @Composable
     fun DetectedTextDisplay() {
-        Column(modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
             Text(
-                text = if (detectedText.isEmpty()) "Detecting..." else detectedText,
+                text = detectedText.ifEmpty { "Detecting..." },
                 color = Color.Black,
                 fontSize = 24.sp,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Light
             )
             if (detectedDate.isNotEmpty()) {
                 Text(
-                    text = "Detected Expiry Date: $detectedDate",
+                    text = "Expiry Date: $detectedDate",
                     color = Color.Red,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold
@@ -132,48 +353,19 @@ class Scanner : ComponentActivity() {
             }
         }
     }
-    @Composable
-    fun CameraPreview(onViewFinderAvailable: (PreviewView) -> Unit) {
-        Box(modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Green)) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .width(300.dp)
-                    .height(200.dp)
-                    .border(2.dp, Color.Green)
-            ) {
-                AndroidView(
-                    factory = { context ->
-                        PreviewView(context).apply {
-                            scaleType = PreviewView.ScaleType.FIT_CENTER
-                            onViewFinderAvailable(this)
-                        }
-                    },
-                    modifier = Modifier.matchParentSize()
-                )
-            }
-            // Text above the camera feed
-            Text(
-                text = "PLACE THE ITEM IN THE CAMERA",
-                fontSize = 36.sp,
-                fontWeight = FontWeight.Light,
-                color = Color.Black,
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(top = 70.dp)
-            )
 
-            DetectedTextDisplay()
-        }
-    }
 
-    private fun setupCamera() {
-        setContent {
-            CameraPreview { viewFinder ->
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    private fun setupCamera(viewFinder: PreviewView) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (allPermissionsGranted()) {
                 startCamera(viewFinder)
-            }
+            } else {
+                requestPermissions()
+            }} else {
+            // Assume permissions are granted as they are not dynamically controlled
+            startCamera(viewFinder)
         }
     }
 
@@ -213,6 +405,7 @@ class Scanner : ComponentActivity() {
         }, ContextCompat.getMainExecutor(this))
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     @OptIn(ExperimentalGetImage::class)
     private fun processImageProxy(imageProxy: ImageProxy) {
         val currentTime = System.currentTimeMillis()
@@ -229,7 +422,7 @@ class Scanner : ComponentActivity() {
                     }, { dateText ->
                         if (dateText != null) {
                             detectedDate = dateText
-                        }  // Update the state for detected date
+                        }
                     })
                 } ?: run {
                     detectedText = "Failed to decode image data"
@@ -278,3 +471,4 @@ class Scanner : ComponentActivity() {
     }
 
 }
+

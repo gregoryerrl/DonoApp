@@ -12,8 +12,7 @@ class OCRProcessor {
     private val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
 
     // Regular expression to capture various date formats
-    private val dateRegex = """\b(3[01]|[12][0-9]|0?[1-9])[ /.-]?(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)[ /.-]?(\d{2}|\d{4})\b""".toRegex(RegexOption.IGNORE_CASE)
-
+    private val dateRegex = """\b((3[01]|[12][0-9]|0?[1-9])[ /.-])?(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)[ /.-]((3[01]|[12][0-9]|0?[1-9])[ /.-])?(\d{2}|\d{4})\b""".toRegex(RegexOption.IGNORE_CASE)
     fun validateDate(year: Int): Boolean {
         val currentYear = Calendar.getInstance().get(Calendar.YEAR)
         // Allow for dates within the past 50 years and 10 years into the future
@@ -22,7 +21,9 @@ class OCRProcessor {
     fun formatDate(dateStr: String): String? {
         val patterns = listOf(
             "ddMMMyy", "dd MMM yy", "dd-MM-yy",
-            "ddMMMyyyy", "dd MMM yyyy", "dd-MM-yyyy"
+            "ddMMMyyyy", "dd MMM yyyy", "dd-MM-yyyy",
+            "MMM dd yyyy", "MMM dd, yyyy", "MMM-dd-yyyy",
+            "yyyy MMM dd"
         )
         for (pattern in patterns) {
             try {
