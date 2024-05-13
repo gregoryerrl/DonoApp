@@ -84,57 +84,66 @@ class Scanner() : ComponentActivity() {
         private val bluetoothAdapter: BluetoothAdapter? = BluetoothAdapter.getDefaultAdapter()
         var isConnected = mutableStateOf(false)
         var connectedDeviceName = mutableStateOf("")
+
         private var bluetoothSocket: BluetoothSocket? = null
 
         val pairedDevices: List<BluetoothDevice>
             get() {
-                // Check for BLUETOOTH_CONNECT permission which is required on API 31 and above
-                if (ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-                    // Permission is not granted
-                    return emptyList()
+                // Before Android 12, check location permission for device discovery
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+                    if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
+                        ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                        Log.e("BluetoothManager", "Location permission not granted for Bluetooth device discovery.")
+                        return emptyList()
+                    }
+                }
+                // For Android 12 and above, check BLUETOOTH_CONNECT permission
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    if (ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                        Log.e("BluetoothManager", "Bluetooth connect permission not granted for accessing paired devices.")
+                        return emptyList()
+                    }
                 }
                 return bluetoothAdapter?.bondedDevices?.toList() ?: emptyList()
             }
 
         fun connectToDevice(device: BluetoothDevice) {
             try {
-                val uuid = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB") // Standard SerialPortService ID
-                if (ActivityCompat.checkSelfPermission(
-                        context,
-                        Manifest.permission.BLUETOOTH_CONNECT
-                    ) != PackageManager.PERMISSION_GRANTED
-                ) {
-                    // TODO: Consider calling
-                    //    ActivityCompat#requestPermissions
-                    // here to request the missing permissions, and then overriding
-                    //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-                    //                                          int[] grantResults)
-                    // to handle the case where the user grants the permission. See the documentation
-                    // for ActivityCompat#requestPermissions for more details.
-                    return
+                val uuid = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    if (ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                        Log.e("BluetoothManager", "BLUETOOTH_CONNECT permission not granted for initiating connection.")
+                        return
+                    }
                 }
-                bluetoothSocket = device.createRfcommSocketToServiceRecord(uuid)
-                if (ActivityCompat.checkSelfPermission(
-                        context,
-                        Manifest.permission.BLUETOOTH_CONNECT
-                    ) != PackageManager.PERMISSION_GRANTED
-                ) {
-                    // TODO: Consider calling
-                    //    ActivityCompat#requestPermissions
-                    // here to request the missing permissions, and then overriding
-                    //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-                    //                                          int[] grantResults)
-                    // to handle the case where the user grants the permission. See the documentation
-                    // for ActivityCompat#requestPermissions for more details.
-                    return
+
+                try {
+                    bluetoothSocket = device.createRfcommSocketToServiceRecord(uuid)
+                    bluetoothSocket?.connect()
+                } catch (e: Exception) {
+                    Log.e("BluetoothManager", "Primary connect method failed for ${device.name}, trying fallback.", e)
+                    // Fallback for some devices like older Android phones
+                    try {
+                        bluetoothSocket?.close()
+                        bluetoothSocket = device.javaClass.getMethod("createRfcommSocket", Int::class.javaPrimitiveType).invoke(device, 1) as BluetoothSocket
+                        bluetoothSocket?.connect()
+                    } catch (e2: Exception) {
+                        Log.e("BluetoothManager", "Fallback connect method also failed for ${device.name}.", e2)
+                        bluetoothSocket = null
+                        isConnected.value = false
+                        return
+                    }
                 }
-                bluetoothSocket?.connect()
+
                 isConnected.value = true
-                connectedDeviceName.value = device.name
+                connectedDeviceName.value = device.name ?: "Unknown Device"
             } catch (e: IOException) {
+                Log.e("BluetoothManager", "Failed to connect to ${device.name}: ${e.message}", e)
                 isConnected.value = false
             }
         }
+
         fun sendText(text: String) {
             try {
                 bluetoothSocket?.outputStream?.write(text.toByteArray())

@@ -24,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import com.example.donoapp.Scanner
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -42,45 +43,60 @@ fun AdminScreen(
 
     var beneficiaryName by remember { mutableStateOf("") }
 
-    val requestBluetoothPermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissions ->
-        val granted = permissions.entries.all { it.value }
-        if (granted) {
-            showDeviceListDialog = true
-        } else {
-            Toast.makeText(context, "Bluetooth permissions are required!", Toast.LENGTH_LONG).show()
+    @Composable
+    fun RequestBluetoothAndLocationPermissions() {
+        val context = LocalContext.current
+        val permissionLauncher = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.RequestMultiplePermissions()
+        ) { permissions ->
+            // Check if all permissions are granted
+            if (permissions.all { it.value }) {
+                Toast.makeText(context, "All permissions granted", Toast.LENGTH_LONG).show()
+                // Now you can show the device list dialog
+                showDeviceListDialog = true
+            } else {
+                Toast.makeText(context, "Required permissions not granted", Toast.LENGTH_LONG).show()
+            }
         }
-    }
 
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissions ->
-        // Check if all permissions are granted or do something accordingly
-        if (permissions.all { it.value }) {
-            Log.d("Permissions", "All permissions granted")
-        } else {
-            Log.d("Permissions", "Not all permissions granted")
-        }
-    }
-
-    LaunchedEffect(key1 = true) {
-        when {
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-                permissionLauncher.launch(
-                    arrayOf(
-                        Manifest.permission.BLUETOOTH_SCAN,
-                        Manifest.permission.BLUETOOTH_CONNECT
+        LaunchedEffect(key1 = true) {
+            when {
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+                    // Android 12 and above
+                    permissionLauncher.launch(
+                        arrayOf(
+                            Manifest.permission.BLUETOOTH_SCAN,
+                            Manifest.permission.BLUETOOTH_CONNECT
+                        )
                     )
-                )
-            }
-            else -> {
-                permissionLauncher.launch(
-                    arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
-                )
+                }
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> {
+                    // Android 10 and 11
+                    permissionLauncher.launch(
+                        arrayOf(
+                            Manifest.permission.ACCESS_FINE_LOCATION
+                        )
+                    )
+                }
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.M -> {
+                    // Android 6 to 9
+                    permissionLauncher.launch(
+                        arrayOf(
+                            Manifest.permission.ACCESS_FINE_LOCATION
+                        )
+                    )
+                }
+                else -> {
+                    permissionLauncher.launch(
+                        arrayOf(
+                            Manifest.permission.ACCESS_FINE_LOCATION
+                        )
+                    )}
             }
         }
     }
+
+    RequestBluetoothAndLocationPermissions()
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -210,41 +226,42 @@ fun DeviceListDialog(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
+    val hasPermission = remember { mutableStateOf(false) }
+
+    // Checking permissions directly in LaunchedEffect
+    LaunchedEffect(key1 = true) {
+        val bluetoothPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            Manifest.permission.BLUETOOTH_CONNECT
+        } else {
+            Manifest.permission.ACCESS_FINE_LOCATION
+        }
+
+        hasPermission.value = ContextCompat.checkSelfPermission(context, bluetoothPermission) == PackageManager.PERMISSION_GRANTED
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Select a Device", fontWeight = FontWeight.Bold) },
         text = {
-            Column {
-                bluetoothManager.pairedDevices.forEach { device ->
-                    TextButton(
-                        onClick = {
-                            bluetoothManager.connectToDevice(device)
-                            onDismiss()
-                        },
-                        modifier = Modifier.fillMaxWidth().padding(8.dp)
-                    ) {
-                        if (ActivityCompat.checkSelfPermission(
-                                context,
-                                Manifest.permission.BLUETOOTH_CONNECT
-                            ) != PackageManager.PERMISSION_GRANTED
+            if (hasPermission.value) {
+                Column {
+                    bluetoothManager.pairedDevices.forEach { device ->
+                        TextButton(
+                            onClick = {
+                                bluetoothManager.connectToDevice(device)
+                                onDismiss()
+                            }
                         ) {
-                            // TODO: Consider calling
-                            //    ActivityCompat#requestPermissions
-                            // here to request the missing permissions, and then overriding
-                            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-                            //                                          int[] grantResults)
-                            // to handle the case where the user grants the permission. See the documentation
-                            // for ActivityCompat#requestPermissions for more details.
-                            return@TextButton
+                            Text(device.name ?: "Unknown Device")
                         }
-                        Text(device.name ?: "Unknown Device", modifier = Modifier.padding(4.dp))
                     }
                 }
+            } else {
+                Text("Permission is not granted. Cannot display devices.")
             }
         },
         confirmButton = {
-            TextButton(onClick =  onDismiss) {
+            TextButton(onClick = onDismiss) {
                 Text("Cancel")
             }
         },
@@ -252,3 +269,4 @@ fun DeviceListDialog(
         backgroundColor = Color(0xFFF0F4C3)
     )
 }
+
