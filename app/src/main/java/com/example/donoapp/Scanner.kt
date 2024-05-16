@@ -21,20 +21,18 @@ import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.ui.unit.dp
-import androidx.annotation.OptIn
 import androidx.annotation.RequiresApi
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -48,26 +46,24 @@ import android.graphics.Rect
 import java.io.ByteArrayOutputStream
 import android.view.WindowManager
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.platform.LocalContext
 import androidx.core.app.ActivityCompat
+import java.io.IOException
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import java.io.IOException
 import java.time.format.DateTimeParseException
 import java.time.temporal.ChronoUnit
 import java.util.Locale
 import java.util.UUID
 
-
 @RequiresApi(Build.VERSION_CODES.O)
 class Scanner() : ComponentActivity() {
     companion object {
         private const val REQUEST_CAMERA_PERMISSION = 101
-        private const val REQUEST_BLUETOOTH_PERMISSION = 102// Define a unique request code
+        private const val REQUEST_BLUETOOTH_PERMISSION = 102 // Define a unique request code
     }
 
     private lateinit var ocrProcessor: OCRProcessor
@@ -79,6 +75,7 @@ class Scanner() : ComponentActivity() {
     var inputDate by mutableStateOf(LocalDate.now())
     var isDateAcceptable by mutableStateOf(true)
     private lateinit var bluetoothManager: BluetoothManager
+    private var lensFacing by mutableStateOf(CameraSelector.DEFAULT_FRONT_CAMERA)
 
     class BluetoothManager(val context: Context) {
         private val bluetoothAdapter: BluetoothAdapter? = BluetoothAdapter.getDefaultAdapter()
@@ -152,13 +149,21 @@ class Scanner() : ComponentActivity() {
             }
         }
     }
+
     @RequiresApi(Build.VERSION_CODES.S)
     @Composable
     fun AppNavigation() {
         val navController = rememberNavController()
         NavHost(navController = navController, startDestination = "welcome") {
             composable("welcome") {
-                WelcomeScreen(onDonateClick = { navController.navigate("camera") }, onAdmin = {navController.navigate("admin")})
+                WelcomeScreen(
+                    onDonateClick = { navController.navigate("category") },
+                    onAdmin = { navController.navigate("admin") },
+                    onClearDetectedDate = { clearDetectedDate() } // Pass the clear function
+                )
+            }
+            composable("category") {
+                CategoryScreen(bluetoothManager = bluetoothManager, navController)
             }
             composable("camera") {
                 CameraPreview(navController)
@@ -167,10 +172,10 @@ class Scanner() : ComponentActivity() {
                 BeneficiaryScreen(bluetoothManager = bluetoothManager) { navController.navigate("confirmation") }
             }
             composable("confirmation") {
-                ConfirmationScreen(onSubmit = {navController.navigate("welcome")})
+                ConfirmationScreen(onSubmit = { navController.navigate("welcome") })
             }
             composable("admin") {
-                AdminScreen(bluetoothManager = bluetoothManager, onSubmit = {navController.navigate("welcome")})
+                AdminScreen(bluetoothManager = bluetoothManager, onSubmit = { navController.navigate("welcome") })
             }
         }
     }
@@ -191,7 +196,6 @@ class Scanner() : ComponentActivity() {
             val daysBetween = ChronoUnit.DAYS.between(inputDate, detectedDate)
             val result = daysBetween >= 7
 
-
             result  // Properly return the computed result
         } catch (e: DateTimeParseException) {
             false  // Handle parsing errors gracefully
@@ -207,8 +211,6 @@ class Scanner() : ComponentActivity() {
             lastToastTime = currentTime
         }
     }
-
-
 
     private fun Image.yuv420888ToBitmap(): Bitmap? {
         val yBuffer = planes[0].buffer // Y
@@ -264,6 +266,7 @@ class Scanner() : ComponentActivity() {
     @Composable
     fun CameraPreview(navController: NavHostController) {
         val context = LocalContext.current
+        var previewView by remember { mutableStateOf<PreviewView?>(null) }
 
         LaunchedEffect(inputDate, detectedDate) {
             isDateAcceptable = updateDateAcceptance(
@@ -275,18 +278,17 @@ class Scanner() : ComponentActivity() {
 
         Column(modifier = Modifier
             .fillMaxSize()
-            .background(Color.Green)
+            .background(Color.White)
             .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Box(modifier = Modifier.background(Color(0xFF388E3C), shape = RoundedCornerShape(12.dp))
-            ){
+            Box(modifier = Modifier.background(Color(0xFF388E3C), shape = RoundedCornerShape(12.dp))) {
                 Text(
                     text = "SCAN YOUR ITEM",
                     fontSize = 36.sp,
                     fontWeight = FontWeight.ExtraLight,
                     color = Color.White,
-                    modifier = Modifier.padding(30.dp)
+                    modifier = Modifier.padding(10.dp)
                 )
             }
 
@@ -303,6 +305,7 @@ class Scanner() : ComponentActivity() {
                     factory = { context ->
                         PreviewView(context).apply {
                             scaleType = PreviewView.ScaleType.FILL_CENTER
+                            previewView = this
                             setupCamera(this)
                         }
                     },
@@ -314,12 +317,20 @@ class Scanner() : ComponentActivity() {
 
             DetectedTextDisplay()
 
-            Spacer(modifier = Modifier.weight(1f)) // This pushes the button to the bottom
-
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
+                Button(
+                    onClick = {
+                        previewView?.let { switchCamera(it) }
+                    },
+                    colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF388E3C)),
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Text("Switch Camera", color = Color.White)
+                }
+
                 Button(
                     onClick = {
                         if (!isDateAcceptable) {
@@ -336,6 +347,34 @@ class Scanner() : ComponentActivity() {
                 }
             }
         }
+    }
+
+    private fun switchCamera(viewFinder: PreviewView) {
+        val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
+        cameraProviderFuture.addListener({
+            val cameraProvider: ProcessCameraProvider = cameraProviderFuture.get()
+
+            try {
+                Log.d("Scanner", "Switching camera...")
+                // Unbind all use cases before switching
+                cameraProvider.unbindAll()
+
+                // Toggle lens facing
+                lensFacing = if (lensFacing == CameraSelector.DEFAULT_FRONT_CAMERA) {
+                    CameraSelector.DEFAULT_BACK_CAMERA
+                } else {
+                    CameraSelector.DEFAULT_FRONT_CAMERA
+                }
+
+                Log.d("Scanner", "New lens facing: $lensFacing")
+
+                // Restart camera with new lens facing direction
+                setupCamera(viewFinder)
+            } catch (e: Exception) {
+                Log.e("Scanner", "Error switching camera: ${e.message}")
+                Toast.makeText(this, "Error switching camera.", Toast.LENGTH_SHORT).show()
+            }
+        }, ContextCompat.getMainExecutor(this))
     }
 
     @Composable
@@ -363,17 +402,14 @@ class Scanner() : ComponentActivity() {
         }
     }
 
-
-
-    @RequiresApi(Build.VERSION_CODES.O)
     private fun setupCamera(viewFinder: PreviewView) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (allPermissionsGranted()) {
                 startCamera(viewFinder)
             } else {
                 requestPermissions()
-            }} else {
-            // Assume permissions are granted as they are not dynamically controlled
+            }
+        } else {
             startCamera(viewFinder)
         }
     }
@@ -396,20 +432,21 @@ class Scanner() : ComponentActivity() {
                     }
                 }
 
-            val cameraSelector = CameraSelector.DEFAULT_FRONT_CAMERA
-
             try {
                 cameraProvider.unbindAll()
                 val camera = cameraProvider.bindToLifecycle(
-                    this, cameraSelector, preview, imageAnalysis
+                    this, lensFacing, preview, imageAnalysis
                 )
 
                 // Apply a 2x zoom
                 val cameraControl = camera.cameraControl
                 cameraControl.setZoomRatio(5.0f)
 
+                Log.d("Scanner", "Camera started with lens facing: $lensFacing")
+
             } catch (e: Exception) {
                 Toast.makeText(this, "Failed to start camera.", Toast.LENGTH_SHORT).show()
+                Log.e("Scanner", "Failed to start camera: ${e.message}")
             }
         }, ContextCompat.getMainExecutor(this))
     }
@@ -444,6 +481,10 @@ class Scanner() : ComponentActivity() {
         imageProxy.close()
     }
 
+    fun clearDetectedDate() {
+        detectedDate = ""
+    }
+
     private fun Image.toBitmap(): Bitmap? {
         val buffer = planes[0].buffer
         buffer.rewind()  // Ensure the buffer is rewound before reading
@@ -462,6 +503,7 @@ class Scanner() : ComponentActivity() {
             null
         }
     }
+
     private fun Bitmap.rotate(degrees: Int): Bitmap {
         val matrix = Matrix()
         matrix.postRotate(degrees.toFloat())
@@ -478,6 +520,4 @@ class Scanner() : ComponentActivity() {
         canvas.drawBitmap(this, 0f, 0f, paint)
         return bmpGrayscale
     }
-
 }
-

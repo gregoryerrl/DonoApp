@@ -21,7 +21,8 @@ import androidx.compose.ui.res.painterResource
 @Composable
 fun WelcomeScreen(
     onDonateClick: () -> Unit,
-    onAdmin: () -> Unit
+    onAdmin: () -> Unit,
+    onClearDetectedDate: () -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -86,7 +87,8 @@ fun WelcomeScreen(
 
             // Donate Now Button
             Button(
-                onClick = onDonateClick,
+                onClick = {onClearDetectedDate() // Call the function to clear detectedDate
+                    onDonateClick()},
                 colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF388E3C)),
                 modifier = Modifier
                     .widthIn(max = 300.dp)  // Max width for better control on tablets
